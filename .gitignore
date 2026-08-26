@@ -1,0 +1,15 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+db.sqlite3
+.env
+media/
+
+# Frontend (for later)
+node_modules/
+dist/
+.env.local
