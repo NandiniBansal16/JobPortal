@@ -38,3 +38,29 @@ class Job(models.Model):
 
     def __str__(self):
         return f"{self.title} at {self.company.name}"
+
+
+class Application(models.Model):
+    STATUS_CHOICES = (
+        ('applied', 'Applied'),
+        ('reviewing', 'Reviewing'),
+        ('interviewed', 'Interviewed'),
+        ('rejected', 'Rejected'),
+        ('hired', 'Hired'),
+    )
+
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='applications')
+    candidate = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='applications')
+ 
+    resume = models.FileField(upload_to='application_resumes/')
+    cover_letter = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')
+    
+    applied_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # Prevent a user from applying to the same job twice!
+        unique_together = ('job', 'candidate')
+
+    def __str__(self):
+        return f"{self.candidate.username} applied to {self.job.title}"
