@@ -1,3 +1,5 @@
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, permissions
 from .models import Company, Job, Application
 from .serializers import CompanySerializer, JobSerializer, ApplicationSerializer
@@ -15,6 +17,10 @@ class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.filter(is_active=True).order_by('-created_at')
     serializer_class = JobSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['job_type', 'location', 'company']
+    search_fields = ['title', 'description', 'requirements']
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
