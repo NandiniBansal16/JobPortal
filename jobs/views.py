@@ -1,8 +1,9 @@
 from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, permissions
-from .models import Company, Job, Application
-from .serializers import CompanySerializer, JobSerializer, ApplicationSerializer
+from .models import Company, Job, Application, CandidateProfile, SavedJob
+from .serializers import CompanySerializer, JobSerializer, ApplicationSerializer, CandidateProfileSerializer, SavedJobSerializer
+
 
 class CompanyViewSet(viewsets.ModelViewSet):
     queryset = Company.objects.all()
@@ -37,3 +38,21 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(candidate=self.request.user)
+
+class CandidateProfileViewSet(viewsets.ModelViewSet):
+    serializer_class = CandidateProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    def get_queryset(self):
+        # Security: Users can only view/edit their own profile data
+        return CandidateProfile.objects.filter(user=self.request.user)
+    def perform_create(self, serializer):
+        # Automatically assign the logged-in user to this profile
+        serializer.save(user=self.request.user)
+class SavedJobViewSet(viewsets.ModelViewSet):
+    serializer_class = SavedJobSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    def get_queryset(self):
+        # Security: Users only see the jobs they personally saved
+        return SavedJob.objects.filter(user=self.request.user)
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

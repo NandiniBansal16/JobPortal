@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Company, Job, Application
+from .models import Company, Job, Application, CandidateProfile, SavedJob
 
 class CompanySerializer(serializers.ModelSerializer):
     class Meta:
@@ -23,3 +23,16 @@ class ApplicationSerializer(serializers.ModelSerializer):
         model = Application
         fields = '__all__'
         read_only_fields = ('candidate', 'status')
+
+class CandidateProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    class Meta:
+        model = CandidateProfile
+        fields = '__all__'
+        read_only_fields = ('user',)
+class SavedJobSerializer(serializers.ModelSerializer):
+    job_details = JobSerializer(source='job', read_only=True)
+    class Meta:
+        model = SavedJob
+        fields = '__all__'
+        read_only_fields = ('user',)

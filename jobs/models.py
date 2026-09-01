@@ -67,3 +67,29 @@ class Application(models.Model):
 
     def __str__(self):
         return f"{self.candidate.username} applied to {self.job.title}"
+
+
+class CandidateProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='candidate_profile')
+    
+    bio = models.TextField(blank=True, null=True)
+    skills = models.CharField(max_length=500, help_text="Comma separated skills (e.g., Python, React, Django)")
+    portfolio_url = models.URLField(blank=True, null=True)
+    github_url = models.URLField(blank=True, null=True)
+    
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Profile for {self.user.username}"
+
+
+class SavedJob(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='saved_jobs')
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='saved_by_users')
+    saved_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'job')
+
+    def __str__(self):
+        return f"{self.user.username} saved {self.job.title}"
