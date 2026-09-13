@@ -12,12 +12,12 @@ import { useRouter } from "@tanstack/react-router";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Log in — JobPortal" },
+      { title: "Log in - JobPortal" },
       {
         name: "description",
         content: "Log in to JobPortal as a candidate to track applications or as an employer.",
       },
-      { property: "og:title", content: "Log in — JobPortal" },
+      { property: "og:title", content: "Log in - JobPortal" },
       {
         property: "og:description",
         content: "Access your JobPortal candidate or employer account.",

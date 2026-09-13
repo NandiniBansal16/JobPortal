@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, type FormEvent, type ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -6,16 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth";
+import { fetchApi } from "@/lib/api";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "Candidate profile — JobPortal" },
+      { title: "Candidate profile - JobPortal" },
       {
         name: "description",
         content: "Edit your candidate profile, skills, links and resume on JobPortal.",
       },
-      { property: "og:title", content: "Candidate profile — JobPortal" },
+      { property: "og:title", content: "Candidate profile - JobPortal" },
       { property: "og:description", content: "Update your profile and resume in one place." },
     ],
   }),
@@ -24,12 +25,14 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const { user, isCandidate } = useAuth();
+  const router = useRouter();
 
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState("");
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [githubUrl, setGithubUrl] = useState("");
   const [resume, setResume] = useState<File | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!user) {
     return (
@@ -69,22 +72,53 @@ function ProfilePage() {
     setResume(file);
   }
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    setErrorMsg(null);
 
-    const formData = {
-      bio,
-      skills: skills
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      portfolio_url: portfolioUrl,
-      github_url: githubUrl,
-      resume: resume?.name ?? null,
-    };
+    // Prepare the form data for file upload
+    const formData = new FormData();
+    formData.append("skills", skills);
+    if (resume) {
+      formData.append("resume_file", resume);
+    }
+    
+    // Note: Django currently only accepts 'skills' and 'resume_file'.
+    // bio, portfolio_url, and github_url are ignored by the backend for now.
 
-    // Wire this up to POST /api/profiles/ (multipart/form-data for resume).
-    console.log("Profile payload:", formData);
+    try {
+      // 1. Try to update an existing resume (PUT)
+      let response = await fetchApi("/api/users/resume/", {
+        method: "PUT",
+        body: formData,
+      });
+
+      if (response.status === 404) {
+        // 2. If it doesn't exist, create a new one (POST)
+        response = await fetchApi("/api/users/resume/", {
+          method: "POST",
+          body: formData,
+        });
+      }
+
+      if (response.ok) {
+        alert("Your profile has been saved successfully!");
+        router.navigate({ to: "/jobs" });
+      } else {
+        const errorData = await response.json();
+        console.error(errorData);
+        // Extract the first error message if it's an object from Django
+        const firstError = Object.values(errorData)[0];
+        if (Array.isArray(firstError)) {
+          setErrorMsg(firstError[0]);
+        } else {
+          setErrorMsg("Failed to save profile. Please make sure you filled out the required fields correctly.");
+        }
+      }
+    } catch (error) {
+      console.error("Profile save failed:", error);
+      setErrorMsg("Could not connect to the server. Please try again.");
+    }
   }
 
   return (
@@ -95,6 +129,12 @@ function ProfilePage() {
           Help employers find you. Your resume and links are shown on your applications.
         </p>
       </div>
+
+      {errorMsg && (
+        <div className="mb-6 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+          {errorMsg}
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -112,12 +152,13 @@ function ProfilePage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="skills">Skills</Label>
+          <Label htmlFor="skills">Skills (Required)</Label>
           <Input
             id="skills"
             value={skills}
             onChange={(event) => setSkills(event.target.value)}
             placeholder="Python, React, Django"
+            required
           />
           <p className="text-xs text-muted-foreground">Separate skills with commas.</p>
         </div>
@@ -145,12 +186,13 @@ function ProfilePage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="resume">Resume</Label>
+          <Label htmlFor="resume">Resume (PDF Required)</Label>
           <Input
             id="resume"
             type="file"
             accept=".pdf,application/pdf"
             onChange={handleFileChange}
+            required
           />
           <p className="text-xs text-muted-foreground">PDF only.</p>
           {resume && <p className="text-xs text-muted-foreground">Selected: {resume.name}</p>}

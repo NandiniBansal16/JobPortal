@@ -11,13 +11,13 @@ import { RoleToggle } from "./login";
 export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
-      { title: "Create an account — JobPortal" },
+      { title: "Create an account - JobPortal" },
       {
         name: "description",
         content:
           "Sign up on JobPortal as a candidate to apply for roles or as an employer to hire.",
       },
-      { property: "og:title", content: "Create an account — JobPortal" },
+      { property: "og:title", content: "Create an account - JobPortal" },
       {
         property: "og:description",
         content: "Join JobPortal in under a minute as a candidate or employer.",
