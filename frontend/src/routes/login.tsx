@@ -31,6 +31,7 @@ function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { login } = useAuth();
   const router = useRouter();
 
@@ -41,10 +42,18 @@ function LoginPage() {
         Enter your username and password to sign in.
       </p>
 
+      {errorMsg && (
+        <div className="mt-4 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+          {errorMsg}
+        </div>
+      )}
+
       <form
         className="mt-8 space-y-5 rounded-xl border border-border bg-card p-6 shadow-card"
          onSubmit={async (event) => {
           event.preventDefault(); // Prevents the page from refreshing on submit
+          setErrorMsg(null);
+          
           try {
             // 1. Make a POST request to the backend with the username and password
             const response = await fetchApi("/api/token/", {
@@ -75,13 +84,15 @@ function LoginPage() {
                 
                 // 5. Send them back to the home page!
                 router.navigate({ to: "/" });
+              } else {
+                setErrorMsg("Failed to load user profile.");
               }
             } else {
-              alert("Invalid username or password!");
+              setErrorMsg("Invalid username or password!");
             }
           } catch (error) {
             console.error("Login failed", error);
-            alert("Could not connect to the server.");
+            setErrorMsg("Could not connect to the server.");
           }
         }}
       >

@@ -1,10 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { type Role } from "@/lib/auth";
+import { useAuth, type Role } from "@/lib/auth";
+import { fetchApi } from "@/lib/api";
 import { RoleToggle } from "./login";
 
 export const Route = createFileRoute("/register")({
@@ -31,6 +32,9 @@ function RegisterPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const { login } = useAuth();
+  const router = useRouter();
 
   return (
     <div className="mx-auto flex max-w-md flex-col px-5 py-16">
@@ -41,14 +45,70 @@ function RegisterPage() {
           : "Register as a candidate to browse and apply for jobs."}
       </p>
 
+      {errorMsg && (
+        <div className="mt-4 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+          {errorMsg}
+        </div>
+      )}
+
       <form
         className="mt-8 space-y-5 rounded-xl border border-border bg-card p-6 shadow-card"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
+          setErrorMsg(null);
 
-          // Placeholder for the real API call:
-          // POST /api/users/register/   body: { username, email, password, role }
-          console.log({ username, email, password, role });
+          try {
+            // 1. Make a POST request to register the user
+            const response = await fetchApi("/api/users/register/", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username, email, password, role }),
+            });
+
+            if (response.ok) {
+              // 2. Automatically log the user in!
+              const loginResponse = await fetchApi("/api/token/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password }),
+              });
+              
+              if (loginResponse.ok) {
+                const tokenData = await loginResponse.json();
+                const accessToken = tokenData.access;
+                
+                const profileResponse = await fetchApi("/api/users/me/", {
+                  headers: { Authorization: `Bearer ${accessToken}` }
+                });
+                
+                if (profileResponse.ok) {
+                  const profile = await profileResponse.json();
+                  login(accessToken, {
+                    name: profile.username,
+                    email: profile.email,
+                    role: profile.role
+                  });
+                  // 3. Redirect directly to the dashboard!
+                  router.navigate({ to: "/dashboard" });
+                }
+              } else {
+                 setErrorMsg("Account created, but automatic login failed. Please try logging in manually.");
+              }
+            } else {
+              const errorData = await response.json();
+              console.error(errorData);
+              // Check if Django provided specific field errors (e.g., {"username": ["This field must be unique."]})
+              const firstError = Object.values(errorData)[0];
+              if (Array.isArray(firstError)) {
+                  setErrorMsg(firstError[0]);
+              } else {
+                  setErrorMsg("Failed to create account. Username or email might already be taken.");
+              }
+            }
+          } catch (error) {
+            console.error("Registration failed", error);
+            setErrorMsg("Could not connect to the server.");
+          }
         }}
       >
         <RoleToggle value={role} onChange={setRole} />
