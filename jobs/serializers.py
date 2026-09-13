@@ -9,6 +9,7 @@ class CompanySerializer(serializers.ModelSerializer):
 
 class JobSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source='company.name', read_only=True)
+    match_score = serializers.IntegerField(read_only=True, required=False)
 
     class Meta:
         model = Job
