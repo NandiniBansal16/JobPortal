@@ -76,12 +76,26 @@ function ProfilePage() {
     event.preventDefault();
     setErrorMsg(null);
 
+    // Helper to set error and scroll to top
+    const showError = (msg: string) => {
+      setErrorMsg(msg);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // Manual validation so we can show errors in our red box instead of native browser popups
+    if (!skills.trim()) {
+      showError("Skills are required. Please enter at least one skill.");
+      return;
+    }
+    if (!resume) {
+      showError("Please select a file for your resume.");
+      return;
+    }
+
     // Prepare the form data for file upload
     const formData = new FormData();
     formData.append("skills", skills);
-    if (resume) {
-      formData.append("resume_file", resume);
-    }
+    formData.append("resume_file", resume);
     
     // Note: Django currently only accepts 'skills' and 'resume_file'.
     // bio, portfolio_url, and github_url are ignored by the backend for now.
@@ -102,22 +116,22 @@ function ProfilePage() {
       }
 
       if (response.ok) {
-        alert("Your profile has been saved successfully!");
-        router.navigate({ to: "/jobs" });
+        alert("Profile saved successfully");
+        router.navigate({ to: "/dashboard" });
       } else {
         const errorData = await response.json();
         console.error(errorData);
         // Extract the first error message if it's an object from Django
         const firstError = Object.values(errorData)[0];
         if (Array.isArray(firstError)) {
-          setErrorMsg(firstError[0]);
+          showError(firstError[0]);
         } else {
-          setErrorMsg("Failed to save profile. Please make sure you filled out the required fields correctly.");
+          showError("Failed to save profile. Please make sure you filled out the required fields correctly.");
         }
       }
     } catch (error) {
       console.error("Profile save failed:", error);
-      setErrorMsg("Could not connect to the server. Please try again.");
+      showError("Could not connect to the server. Please try again.");
     }
   }
 
@@ -152,13 +166,14 @@ function ProfilePage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="skills">Skills (Required)</Label>
+          <Label htmlFor="skills">
+            Skills<span className="text-destructive">*</span>
+          </Label>
           <Input
             id="skills"
             value={skills}
             onChange={(event) => setSkills(event.target.value)}
             placeholder="Python, React, Django"
-            required
           />
           <p className="text-xs text-muted-foreground">Separate skills with commas.</p>
         </div>
@@ -186,13 +201,14 @@ function ProfilePage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="resume">Resume (PDF Required)</Label>
+          <Label htmlFor="resume">
+            Resume (PDF)<span className="text-destructive">*</span>
+          </Label>
           <Input
             id="resume"
             type="file"
             accept=".pdf,application/pdf"
             onChange={handleFileChange}
-            required
           />
           <p className="text-xs text-muted-foreground">PDF only.</p>
           {resume && <p className="text-xs text-muted-foreground">Selected: {resume.name}</p>}
